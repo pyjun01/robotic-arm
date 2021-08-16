@@ -107,6 +107,10 @@ const Renderer = (ctx: CanvasRenderingContext2D) => {
     ctx.restore();
 
     renderAxis(axisPoint.x, axisPoint.y, 18);
+    renderArc(current, armSize.height / 2 - 2, {
+      fillStyle: '#fff',
+      strokeStyle: '#333',
+    });
   }
 
   const renderCenterAxis = () => {
@@ -120,6 +124,9 @@ const Renderer = (ctx: CanvasRenderingContext2D) => {
     renderBorder();
     renderArm();
     renderCenterAxis();
+    renderArc(target, 4, {
+      strokeStyle: '#0af'
+    })
   }
 
   const animate = () => {
