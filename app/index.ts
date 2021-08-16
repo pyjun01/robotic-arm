@@ -10,13 +10,10 @@ canvas.height = height;
 
 const renderer = Renderer(ctx);
 
-
-
-renderer.render();
+renderer.render(100, 250);
 
 canvas.onclick = e => {
-  const { x } = canvas.getBoundingClientRect();
+  const { x, y } = canvas.getBoundingClientRect();
 
-  console.log(e.pageX - x);
-  renderer.render(e.pageX - x);
+  renderer.render(e.pageX - x, e.pageY - y);
 }
