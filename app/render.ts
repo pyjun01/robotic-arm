@@ -1,100 +1,96 @@
-import { width, height, center, armSize } from './constants';
-
-interface Point {
-  x: number;
-  y: number;
-}
-
-const toRadian = (angle: number) => Math.PI / 180 * angle;
-
-const getAngle = (A,B,C) => {
-  var AB = Math.sqrt(Math.pow(B.x-A.x,2)+ Math.pow(B.y-A.y,2));    
-  var BC = Math.sqrt(Math.pow(B.x-C.x,2)+ Math.pow(B.y-C.y,2)); 
-  var AC = Math.sqrt(Math.pow(C.x-A.x,2)+ Math.pow(C.y-A.y,2));
-
-  return Math.acos((BC*BC+AB*AB-AC*AC)/(2*BC*AB));
-}
+import { width, height, center, armSize, Point } from './constants';
+import { getDistance, getRadian } from './lib';
 
 const Renderer = (ctx: CanvasRenderingContext2D) => {
+  const current = {
+    x: width / 4,
+    y: height / 2,
+  };
+  let v = {
+    x: 0,
+    y: 0,
+  };
+  let target = {
+    x: width / 4,
+    y: height / 2,
+  };
+
+  const renderArc = (pos: Point, size: number, style) => {
+    ctx.beginPath();
+    Object.assign(ctx, style);
+    ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
+
+    if (style.fillStyle) {
+      ctx.fill();
+    }
+
+    if (style.strokeStyle) {
+      ctx.stroke();
+    }
+  }
+
   const renderAxis = (x: number, y: number, size = 25) => {
-    ctx.beginPath();
-    ctx.fillStyle = '#b8c1c6';
-    ctx.strokeStyle = '#eee';
-    ctx.arc(x, y, size, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.stroke();
-  
-    ctx.beginPath();
-    ctx.fillStyle = '#4c4648';
-    ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.closePath();
+    renderArc({ x, y }, size, {
+      fillStyle: '#b8c1c6'
+    });
+
+    renderArc({ x, y }, size * 0.6, {
+      fillStyle: '#4c4648'
+    });
   }
   
   const renderBorder = () => {
-    ctx.beginPath(); // 테두리
-    ctx.fillStyle = '#b8c1c6';
-    ctx.arc(center.x, center.y, width / 2, 0, Math.PI * 2);
-    ctx.stroke();
+    renderArc(center, width / 2, {
+      strokeStyle: '#333'
+    });
   }
 
-  const renderArm = (x = width / 4, y = height / 2) => {
-    const from = {...center};
-    const to = { x, y };
+  const renderGuide = (contact: Point, axis: Point, middle: Point) => {
+    ctx.save();
+    ctx.globalAlpha = 0.3;
+    ctx.setLineDash([5, 5]);
+    
+    ctx.beginPath();
+    ctx.moveTo(center.x, center.y);
+    ctx.lineTo(current.x, current.y);
+    ctx.moveTo(center.x, center.y);
+    ctx.lineTo(contact.x, contact.y);
+    ctx.moveTo(contact.x, contact.y);
+    ctx.lineTo(current.x, current.y);
+    ctx.moveTo(middle.x, middle.y);
+    ctx.lineTo(axis.x, axis.y);
+    ctx.stroke();
+    
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = '#333';
+    ctx.beginPath();
+    ctx.arc(middle.x, middle.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  const renderArm = () => {
     const middle = {
-      x: to.x + (from.x - to.x) / 2,
-      y: to.y + (from.y - to.y) / 2,
+      x: current.x + (center.x - current.x) / 2,
+      y: current.y + (center.y - current.y) / 2,
     };
-
-    const contact = to.x < from.x && to.y < from.y || to.x > from.x && to.y > from.y ? { x, y: from.y } : { x: from.x, y };
-
-    const radian = (() => {
-      if (to.x === from.x) {
-        return toRadian(to.y > from.y ? 180 : 0);
-      }
-
-      if (to.y === from.y) {
-        return toRadian(to.x > from.x ? 90 : 270);
-      }
-
-      return toRadian(to.x > from.x ? (to.y > from.y ? 90 : 0) : (to.y > from.y ? 180 : 270));
-    })();
-
-    const angle = to.x === from.x || to.y === from.y ? 0 : getAngle(to, from, contact);
-    const distance = Math.sqrt(Math.pow(from.x - to.x, 2) + Math.pow(from.y - to.y, 2));
+    const contact = 
+      current.x < center.x && current.y < center.y ||
+      current.x > center.x && current.y > center.y ?
+      { x: current.x, y: center.y } :
+      { x: center.x, y: current.y };
+  
+    const radian = getRadian(current, center, contact);
+    const distance = getDistance(center, current);
     const top = Math.sqrt(Math.pow(armSize.width, 2) - Math.pow(distance / 2, 2));
 
     const axisPoint = {
-      x: Math.round(Math.cos(radian + angle) * top + middle.x),
-      y: Math.round(Math.sin(radian + angle) * top + middle.y)
+      x: Math.round(Math.cos(radian) * top + middle.x),
+      y: Math.round(Math.sin(radian) * top + middle.y)
     }
 
-    {
-      ctx.save();
-      ctx.globalAlpha = 0.3;
-      ctx.setLineDash([5, 5]);
-      
-      ctx.beginPath();
-      ctx.moveTo(from.x, from.y);
-      ctx.lineTo(to.x, to.y);
-      ctx.moveTo(from.x, from.y);
-      ctx.lineTo(contact.x, contact.y);
-      ctx.moveTo(contact.x, contact.y);
-      ctx.lineTo(to.x, to.y);
-      ctx.moveTo(middle.x, middle.y);
-      ctx.lineTo(axisPoint.x, axisPoint.y);
-      ctx.stroke();
-      ctx.closePath();
-      
-      ctx.globalAlpha = 0.9;
-      ctx.fillStyle = '#333';
-      ctx.beginPath();
-      ctx.arc(middle.x, middle.y, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.closePath();
-
-      ctx.restore();
-    }
+    renderGuide(contact, axisPoint, middle);
 
     ctx.save();
     ctx.beginPath();
@@ -102,45 +98,64 @@ const Renderer = (ctx: CanvasRenderingContext2D) => {
     ctx.lineWidth = armSize.height;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-    
-    ctx.moveTo(from.x, from.y);
+
+    ctx.moveTo(center.x, center.y);
     ctx.lineTo(axisPoint.x, axisPoint.y);
-    ctx.lineTo(to.x, to.y);
+    ctx.lineTo(current.x, current.y);
     ctx.stroke();
-  
+
     ctx.restore();
 
     renderAxis(axisPoint.x, axisPoint.y, 18);
   }
 
   const renderCenterAxis = () => {
-    ctx.beginPath();
-    ctx.fillStyle = '#b8c1c6';
-    ctx.arc(center.x, center.y, 25, 0, Math.PI * 2);
-    ctx.fill();
-  
-    ctx.beginPath();
-    ctx.fillStyle = '#4c4648';
-    ctx.arc(center.x, center.y, 15, 0, Math.PI * 2);
-    ctx.fill();
-  
     renderAxis(center.x, center.y);
   }
 
-  const render = (x?: number, y?: number) => {
-    ctx.canvas.width = ctx.canvas.width;
+  const render = () => {
+    ctx.canvas.width = width;
+    ctx.canvas.height = height;
 
     renderBorder();
-    renderArm(x, y);
+    renderArm();
     renderCenterAxis();
   }
 
+  const animate = () => {
+    if (current.x !== target.x || current.y !== target.y) {
+      const gap =  getDistance(current, target);
+
+      if (gap < 10) {
+        current.x = target.x;
+        current.y = target.y;
+      } else {
+        current.x += v.x;
+        current.y += v.y;
+      }
+
+      render();
+    }
+
+    requestAnimationFrame(animate);
+  }
+
+  const updateTarget = (point: Point) => {
+    const distance = getDistance(current, point);
+
+    v = {
+      x: (point.x - current.x) / distance * 10,
+      y: (point.y - current.y) / distance * 10,
+    };
+
+    target = {...point};
+  }
+
+  animate();
+
   return {
-    renderAxis,
-    renderBorder,
-    renderArm,
-    renderCenterAxis,
     render,
+    updateTarget,
   };
 }
 

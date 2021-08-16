@@ -1,19 +1,34 @@
-import { width, height } from './constants';
+import { width, height, center } from './constants';
+import { getDistance } from './lib';
 import Renderer from './render';
 
-const canvas = document.querySelector('canvas');
-const ctx = canvas.getContext('2d');
+(() => {
+  const canvas = document.querySelector('canvas');
+  const ctx = canvas.getContext('2d');
 
-canvas.width = width;
-canvas.height = height;
+  const renderer = Renderer(ctx);
 
+  const handleClick = (e: MouseEvent) => {
+    const { x, y } = canvas.getBoundingClientRect();
 
-const renderer = Renderer(ctx);
+    const pos = { x: e.pageX - x, y: e.pageY - y };
+    const distance = getDistance(center, pos);
 
-renderer.render(100, 250);
+    if (distance > width / 2 || distance <= 30) {
+      return;
+    }
 
-canvas.onclick = e => {
-  const { x, y } = canvas.getBoundingClientRect();
+    renderer.updateTarget(pos);
+  };
 
-  renderer.render(e.pageX - x, e.pageY - y);
-}
+  const init = () => {
+    canvas.width = width;
+    canvas.height = height;
+
+    canvas.addEventListener('click', handleClick);
+
+    renderer.render();
+  }
+
+  init();
+})();
